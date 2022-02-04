@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.emos.api.db.dao.TbApprovalDao">
+    <select id="searchUserSummary1" parameterType="HashMap" resultType="HashMap">
+        SELECT u.name AS creatorName,
+        m.title,
+        m.type,
+        "false" AS filing,
+        m.uuid AS taskId,
+        date_format(m.create_time, '%Y-%m-%d') AS createDate,
+        m.instance_id AS processId,
+        m.status
+        FROM tb_user u
+        LEFT JOIN tb_meeting m ON u.id = m.creator_id
+        WHERE u.id = #{userId}
+        AND m.status = 1
+        <if test="type=='会议申请'">
+            AND type=2
+        </if>
+        <if test="creatorName!=null">
+            AND u.name like "%${creatorName}%"
+        </if>
+    </select>
+    <select id="searchApprovalContent" parameterType="HashMap" resultType="HashMap">
+        SELECT
+        max(u.name) AS name,
+        max(u.photo) AS photo,
+        max(u.id) AS id,
+        date_format( max(m.create_time), '%Y-%m-%d' ) AS date,
+        "" AS result,
+        DATE_FORMAT( max(m.END), '%H:%i' )- DATE_FORMAT( max(m.START), '%H:%i' ) AS hours,
+        CONCAT("", GROUP_CONCAT(u.name SEPARATOR "、"), "") AS members,
+        DATE_FORMAT( max(m.START), '%H:%i' ) AS start,
+        DATE_FORMAT( max(m.END), '%H:%i' ) AS end,
+        max(m.type) AS type,
+        max(m.uuid) AS uuid,
+        max(m.desc) AS `desc`
+        FROM
+        tb_user u
+        LEFT JOIN tb_meeting m ON JSON_CONTAINS(m.members, CONVERT(u.id, CHAR))
+        WHERE
+        m.instance_id = #{instanceId}
+        <if test="type=='会议申请'">
+            AND type = 2
+        </if>
+        <if test="type=='在线会议'">
+            AND type = 1
+        </if>
+        <if test="status=='待审批'">
+            AND m.status =1
+        </if>
+    </select>
+    <select id="searchApprovalBpmn" parameterType="HashMap" resultType="HashMap">
+        SELECT image AS bpmnUrl
+        FROM tb_meeting
+        WHERE instance_id = #{instanceId}
+    </select>
+</mapper>
